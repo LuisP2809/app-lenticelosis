@@ -1,12 +1,12 @@
 const CACHE_NAME = 'lenticelosis-pwa-v1';
 const APP_SHELL = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon.svg',
-  '/src/main.js',
-  '/src/styles.css'
-];
+  './',
+  './index.html',
+  './manifest.json',
+  './icon.svg',
+  './src/main.js',
+  './src/styles.css'
+].map((path) => new URL(path, self.registration.scope).toString());
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -39,7 +39,7 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
           return networkResponse;
         })
-        .catch(() => caches.match('/index.html'));
+        .catch(() => caches.match(new URL('./index.html', self.registration.scope).toString()));
     })
   );
 });
