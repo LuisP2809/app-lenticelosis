@@ -10,7 +10,8 @@ select {
   font: inherit;
 }
 
-select:focus {
+select:focus,
+.confirm-dialog input:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(36, 107, 69, 0.16);
 }
@@ -18,6 +19,10 @@ select:focus {
 select option:disabled {
   color: #89968f;
   background: #edf4ef;
+}
+
+.main-actions {
+  align-items: stretch;
 }
 
 .counter-summary {
@@ -166,6 +171,25 @@ select option:disabled {
   color: var(--muted);
 }
 
+.confirm-dialog label {
+  display: grid;
+  gap: 8px;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.confirm-dialog input {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid #cddbd2;
+  border-radius: 8px;
+  background: #fbfdfb;
+  color: var(--ink);
+  padding: 12px;
+  outline: none;
+  font: inherit;
+}
+
 .dialog-actions {
   justify-content: end;
 }
@@ -175,6 +199,7 @@ select option:disabled {
     min-height: 52px;
   }
 
+  .main-actions,
   .general-summary-grid {
     grid-template-columns: 1fr;
   }
