@@ -165,8 +165,9 @@ h3 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.variety-grid,
 .process-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .choice-button {
@@ -222,7 +223,7 @@ h3 {
 }
 
 .full-summary {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   margin-bottom: 16px;
 }
 
@@ -403,25 +404,38 @@ input[readonly] {
   pointer-events: none;
 }
 
-.photo-preview {
+.photo-preview,
+.saved-photo-preview {
   display: grid;
   place-items: center;
-  min-height: 220px;
-  margin-top: 12px;
   overflow: hidden;
   border: 1px dashed #b8c9bd;
   border-radius: 8px;
   background: #f8fbf8;
 }
 
-.photo-preview img {
+.photo-preview {
+  min-height: 220px;
+  margin-top: 12px;
+}
+
+.saved-photo-preview {
+  min-height: 140px;
+  margin-top: 12px;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.photo-preview img,
+.saved-photo-preview img {
   width: 100%;
   max-height: 340px;
   object-fit: contain;
   background: #0f2017;
 }
 
-.empty-photo {
+.empty-photo,
+.empty-saved-photo {
   color: var(--muted);
   font-weight: 800;
 }
@@ -555,9 +569,20 @@ summary {
   padding: 0;
 }
 
+@media (max-width: 1040px) {
+  .full-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 860px) {
   .app-layout {
     grid-template-columns: 1fr;
+  }
+
+  .variety-grid,
+  .process-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -581,6 +606,7 @@ summary {
   }
 
   .choice-grid,
+  .variety-grid,
   .process-grid,
   .field-grid,
   .quadrant-fields,
