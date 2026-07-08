@@ -109,7 +109,7 @@ window.addEventListener('offline', updateConnectionStatus);
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {
+    navigator.serviceWorker.register(new URL('../sw.js', import.meta.url), { scope: '../' }).catch(() => {
       connectionStatus.textContent = 'PWA no instalada';
       connectionStatus.className = 'status-pill warning';
     });
@@ -208,7 +208,7 @@ function saveEvaluation(event) {
   const fruitCode = form.elements.fruitCode.value.trim();
 
   const evaluation = {
-    id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}`,
+    id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}`,
     fruitCode: fruitCode || `Fruto ${evaluations.length + 1}`,
     variety: form.elements.variety.value.trim(),
     batch: form.elements.batch.value.trim(),
