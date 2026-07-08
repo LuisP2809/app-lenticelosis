@@ -4,8 +4,8 @@ Aplicacion web progresiva para evaluar lenticelosis en frutos de palta desde cel
 
 ## Funciones principales
 
-- Flujo guiado por pasos antes de registrar frutos.
-- Seleccion obligatoria de fundo, tipo de evaluacion y proceso.
+- Flujo guiado de 3 pasos antes de guardar cada fruto.
+- Seleccion obligatoria de fecha, fundo, tipo de evaluacion, variedad y proceso.
 - Registro de evaluaciones por fruto.
 - Evaluacion de 3 cuadrantes por fruto, cada uno con marco visual 3x3.
 - Captura de lenticelas totales y afectadas por cuadrante.
@@ -19,25 +19,27 @@ Aplicacion web progresiva para evaluar lenticelosis en frutos de palta desde cel
 
 ## Flujo por pasos
 
-### Paso 1: Seleccion inicial
+### Paso 1 de 3: Datos generales de la evaluacion
 
-Antes de abrir el formulario, la app solicita dos campos obligatorios:
+Antes de abrir el formulario de cuadrantes, la app solicita campos obligatorios:
 
+- Fecha: campo tipo fecha, con la fecha actual por defecto.
 - Fundo: Olmos o Motupe.
-- Tipo de evaluacion / cosecha: Mecanica o Manual.
+- Tipo de evaluacion: Mecanizada o Manual.
+- Variedad: Hass, Zutano, Maluma, Pinkerton o Ettinger.
 
-La pantalla usa botones grandes para facilitar el uso desde celular. El usuario no puede avanzar hasta seleccionar ambos campos.
+El usuario no puede avanzar si falta algun dato. Estos valores se muestran luego como resumen y se guardan con cada evaluacion.
 
-### Paso 2: Seleccion de proceso
+### Paso 2 de 3: Proceso a elegir
 
-Luego se elige el proceso obligatorio:
+Despues de completar los datos generales, se elige un proceso obligatorio:
 
 1. 01. Planta
 2. 02. Balde
 3. 03. Bin
 4. 04. Acopio
 5. 05. Recepcion
-6. 06. Desp. Proceso
+6. 06. Proceso
 7. 07. Desp. 5 dias
 8. 08. Desp. 10 dias
 9. 09. Desp. 15 dias
@@ -46,28 +48,38 @@ Luego se elige el proceso obligatorio:
 
 El formulario de evaluacion solo se muestra despues de seleccionar un proceso.
 
-### Paso 3: Formulario de evaluacion
+### Paso 3 de 3: Formulario de evaluacion
 
-El formulario mantiene la pantalla original de registro e incorpora un resumen superior con:
+El formulario permite registrar:
 
+- Codigo o N de fruto.
+- Cuadrante 1.
+- Cuadrante 2.
+- Cuadrante 3.
+- Resultado final.
+- Clasificacion.
+- Foto de la fruta.
+- Observacion.
+- Evaluaciones guardadas.
+
+Como fecha y variedad se eligen en el Paso 1, ya no se piden dentro del formulario. En su lugar, el formulario muestra un resumen visible con:
+
+- Fecha.
 - Fundo.
 - Tipo de evaluacion.
+- Variedad.
 - Proceso.
 
-Tambien incluye botones para volver, cambiar la seleccion inicial y comenzar una nueva evaluacion.
+Tambien incluye botones para volver, cambiar datos generales, cambiar proceso y comenzar una nueva evaluacion.
 
-## Foto de la fruta
+## Registro de cuadrantes
 
-En el formulario, despues del resultado final, aparece la seccion **Foto de la fruta**. Permite:
+Por cada cuadrante se registra:
 
-- Tomar foto desde la camara del celular.
-- Subir una foto desde galeria.
-- Ver la vista previa antes de guardar.
-- Cambiar la foto seleccionando otra imagen.
-- Eliminar la foto antes de guardar.
-- Guardar la foto junto con la evaluacion para uso offline.
-
-Las fotos se guardan localmente en IndexedDB para evitar sobrecargar `localStorage`.
+- Lenticelas totales.
+- Lenticelas afectadas.
+- Lenticelas sanas, calculadas automaticamente.
+- Porcentaje de dano, calculado automaticamente.
 
 ## Regla de calculo
 
@@ -75,6 +87,12 @@ Por cuadrante:
 
 ```txt
 porcentaje de dano = lenticelas afectadas / lenticelas totales * 100
+```
+
+Lenticelas sanas:
+
+```txt
+lenticelas sanas = lenticelas totales - lenticelas afectadas
 ```
 
 Resultado final del fruto:
@@ -95,33 +113,75 @@ Clasificacion:
 | Grado 5 | Mayor a 40% hasta 50% |
 | Grado 6 | Mayor a 50% |
 
+## Foto de la fruta
+
+En el formulario, despues del resultado final, aparece la seccion **Foto de la fruta**. Permite:
+
+- Tomar foto desde la camara del celular.
+- Subir una foto desde galeria.
+- Ver la vista previa antes de guardar.
+- Cambiar la foto seleccionando otra imagen.
+- Eliminar la foto antes de guardar.
+- Guardar la foto junto con la evaluacion para uso offline.
+
+Las fotos se guardan localmente en IndexedDB para evitar sobrecargar `localStorage`. En las evaluaciones guardadas se muestra si existe foto y, al abrir **Ver cuadrantes**, se carga la foto guardada cuando esta disponible.
+
+## Observacion
+
+Despues de la foto hay un campo largo opcional llamado **Observacion** para notas de campo, condicion del fruto o comentarios.
+
 ## Datos guardados
 
 Cada evaluacion guarda:
 
+- Fecha.
 - Fundo.
 - Tipo de evaluacion.
-- Proceso.
-- Codigo del fruto.
 - Variedad.
-- Lote / muestra.
-- Fecha.
-- Datos de los 3 cuadrantes.
+- Proceso.
+- Codigo o N de fruto.
+- Datos del cuadrante 1.
+- Datos del cuadrante 2.
+- Datos del cuadrante 3.
 - Resultado final.
-- Grado de clasificacion.
+- Clasificacion.
 - Indicador de foto registrada.
 - Foto de fruta, si existe.
-- Observaciones.
+- Observacion.
+
+## Evaluaciones guardadas
+
+Cada evaluacion se muestra de forma resumida con:
+
+- Codigo o N de fruto.
+- Fecha.
+- Fundo.
+- Tipo de evaluacion.
+- Variedad.
+- Proceso.
+- Resultado final.
+- Clasificacion.
+- Foto registrada: Si / No.
+
+Al abrir **Ver cuadrantes** se muestran los datos de los 3 cuadrantes, la foto si existe y la observacion.
 
 ## Exportacion CSV
 
-El CSV incluye las columnas anteriores y agrega:
+El CSV incluye:
 
+- Fecha.
 - Fundo.
 - Tipo de evaluacion.
+- Variedad.
 - Proceso.
+- Codigo o N de fruto.
+- Cuadrante 1: lenticelas totales, afectadas, sanas y porcentaje de dano.
+- Cuadrante 2: lenticelas totales, afectadas, sanas y porcentaje de dano.
+- Cuadrante 3: lenticelas totales, afectadas, sanas y porcentaje de dano.
+- Resultado final.
+- Clasificacion.
 - Foto registrada: Si / No.
-- Observaciones.
+- Observacion.
 
 El archivo descargado puede abrirse en Excel.
 

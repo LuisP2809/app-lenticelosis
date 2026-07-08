@@ -1,20 +1,21 @@
 import './styles.css';
 
-const STORAGE_KEY = 'lenticelosis-evaluaciones-v2';
-const LEGACY_STORAGE_KEY = 'lenticelosis-evaluaciones-v1';
+const STORAGE_KEY = 'lenticelosis-evaluaciones-v3';
+const LEGACY_STORAGE_KEYS = ['lenticelosis-evaluaciones-v2', 'lenticelosis-evaluaciones-v1'];
 const DB_NAME = 'lenticelosis-fotos-db';
 const DB_VERSION = 1;
 const PHOTO_STORE = 'fruitPhotos';
 const quadrants = [1, 2, 3];
 const farms = ['Olmos', 'Motupe'];
-const harvestTypes = ['Mecanica', 'Manual'];
+const harvestTypes = ['Mecanizada', 'Manual'];
+const varieties = ['Hass', 'Zutano', 'Maluma', 'Pinkerton', 'Ettinger'];
 const processes = [
   '01. Planta',
   '02. Balde',
   '03. Bin',
   '04. Acopio',
   '05. Recepcion',
-  '06. Desp. Proceso',
+  '06. Proceso',
   '07. Desp. 5 dias',
   '08. Desp. 10 dias',
   '09. Desp. 15 dias',
@@ -24,7 +25,13 @@ const processes = [
 
 let evaluations = loadEvaluations();
 let step = 1;
-let selection = { farm: '', harvestType: '', process: '' };
+let selection = {
+  date: getToday(),
+  farm: '',
+  harvestType: '',
+  variety: '',
+  process: ''
+};
 let currentPhoto = null;
 let dbPromise;
 
@@ -35,7 +42,7 @@ app.innerHTML = `
     <div>
       <p class="eyebrow">Palta · Lenticelosis</p>
       <h1>Evaluacion de frutos</h1>
-      <p class="subtitle">Selecciona fundo, tipo de evaluacion y proceso antes de registrar el fruto.</p>
+      <p class="subtitle">Registra datos generales, elige proceso y luego evalua los cuadrantes del fruto.</p>
     </div>
     <span id="connectionStatus" class="status-pill">Comprobando...</span>
   </header>
@@ -43,8 +50,13 @@ app.innerHTML = `
   <main class="step-layout">
     <section id="stepOne" class="panel step-panel" aria-labelledby="stepOneTitle">
       <p class="step-kicker">Paso 1 de 3</p>
-      <h2 id="stepOneTitle">Seleccion inicial</h2>
-      <p class="muted">Elige los datos generales de la evaluacion. Ambos campos son obligatorios.</p>
+      <h2 id="stepOneTitle">Datos generales de la evaluacion</h2>
+      <p class="muted">Completa todos los campos para continuar.</p>
+
+      <label>
+        Fecha
+        <input id="evaluationDate" type="date" required />
+      </label>
 
       <div class="choice-group" role="group" aria-label="Fundo">
         <h3>Fundo</h3>
@@ -54,24 +66,33 @@ app.innerHTML = `
       </div>
 
       <div class="choice-group" role="group" aria-label="Tipo de evaluacion">
-        <h3>Tipo de evaluacion / cosecha</h3>
+        <h3>Tipo de evaluacion</h3>
         <div class="choice-grid">
           ${harvestTypes.map((type) => `<button class="choice-button" type="button" data-choice="harvestType" data-value="${type}">${type}</button>`).join('')}
         </div>
       </div>
 
-      <p id="stepOneError" class="form-error" hidden>Selecciona fundo y tipo de evaluacion para continuar.</p>
+      <div class="choice-group" role="group" aria-label="Variedad">
+        <h3>Variedad</h3>
+        <div class="choice-grid variety-grid">
+          ${varieties.map((variety) => `<button class="choice-button" type="button" data-choice="variety" data-value="${variety}">${variety}</button>`).join('')}
+        </div>
+      </div>
+
+      <p id="stepOneError" class="form-error" hidden>Completa fecha, fundo, tipo de evaluacion y variedad para continuar.</p>
       <button id="goToProcessButton" class="primary-button wide-button" type="button">Continuar</button>
     </section>
 
     <section id="stepTwo" class="panel step-panel" aria-labelledby="stepTwoTitle" hidden>
       <p class="step-kicker">Paso 2 de 3</p>
-      <h2 id="stepTwoTitle">Seleccion de proceso</h2>
-      <p class="muted">El proceso es obligatorio antes de abrir el formulario.</p>
+      <h2 id="stepTwoTitle">Proceso a elegir</h2>
+      <p class="muted">Selecciona el proceso obligatorio antes de abrir el formulario.</p>
 
       <div class="selection-summary compact-summary" aria-live="polite">
+        <span><strong>Fecha:</strong> <em data-summary="date">-</em></span>
         <span><strong>Fundo:</strong> <em data-summary="farm">-</em></span>
         <span><strong>Tipo:</strong> <em data-summary="harvestType">-</em></span>
+        <span><strong>Variedad:</strong> <em data-summary="variety">-</em></span>
       </div>
 
       <div class="process-grid" role="group" aria-label="Proceso">
@@ -91,40 +112,29 @@ app.innerHTML = `
           <div class="section-heading stacked-mobile">
             <div>
               <p class="step-kicker">Paso 3 de 3</p>
-              <h2 id="formTitle">Nueva evaluacion</h2>
+              <h2 id="formTitle">Formulario de evaluacion</h2>
             </div>
             <div class="button-row form-nav-actions">
               <button id="backToProcessButton" class="secondary-button" type="button">Volver</button>
-              <button id="changeSelectionButton" class="ghost-button framed-button" type="button">Cambiar seleccion</button>
+              <button id="changeGeneralButton" class="ghost-button framed-button" type="button">Cambiar datos generales</button>
+              <button id="changeProcessButton" class="ghost-button framed-button" type="button">Cambiar proceso</button>
               <button id="newEvaluationButton" class="ghost-button framed-button" type="button">Nueva evaluacion</button>
             </div>
           </div>
 
           <div class="selection-summary full-summary" aria-live="polite">
+            <span><strong>Fecha:</strong> <em data-summary="date">-</em></span>
             <span><strong>Fundo:</strong> <em data-summary="farm">-</em></span>
             <span><strong>Tipo de evaluacion:</strong> <em data-summary="harvestType">-</em></span>
+            <span><strong>Variedad:</strong> <em data-summary="variety">-</em></span>
             <span><strong>Proceso:</strong> <em data-summary="process">-</em></span>
           </div>
 
           <form id="evaluationForm" class="evaluation-form">
-            <div class="field-grid">
-              <label>
-                Codigo del fruto
-                <input id="fruitCode" name="fruitCode" type="text" placeholder="Ej. Lote1-001" autocomplete="off" />
-              </label>
-              <label>
-                Variedad
-                <input id="variety" name="variety" type="text" placeholder="Ej. Hass" autocomplete="off" />
-              </label>
-              <label>
-                Lote / muestra
-                <input id="batch" name="batch" type="text" placeholder="Ej. Campo A" autocomplete="off" />
-              </label>
-              <label>
-                Fecha
-                <input id="date" name="date" type="date" required />
-              </label>
-            </div>
+            <label>
+              Codigo o N de fruto
+              <input id="fruitCode" name="fruitCode" type="text" placeholder="Ej. Fruto 001" autocomplete="off" />
+            </label>
 
             <div id="quadrantList" class="quadrant-list"></div>
 
@@ -163,7 +173,7 @@ app.innerHTML = `
             </section>
 
             <label class="notes-label">
-              Observaciones
+              Observacion
               <textarea id="notes" name="notes" rows="3" placeholder="Notas de campo, condicion del fruto o comentarios"></textarea>
             </label>
 
@@ -203,13 +213,13 @@ const summaryText = document.querySelector('#summaryText');
 const exportButton = document.querySelector('#exportButton');
 const deleteAllButton = document.querySelector('#deleteAllButton');
 const connectionStatus = document.querySelector('#connectionStatus');
-const dateInput = document.querySelector('#date');
+const evaluationDateInput = document.querySelector('#evaluationDate');
 const cameraInput = document.querySelector('#cameraInput');
 const galleryInput = document.querySelector('#galleryInput');
 const photoPreview = document.querySelector('#photoPreview');
 const removePhotoButton = document.querySelector('#removePhotoButton');
 
-dateInput.valueAsDate = new Date();
+evaluationDateInput.value = selection.date;
 renderQuadrants();
 renderEvaluations();
 updateResult();
@@ -218,6 +228,11 @@ renderStep();
 
 form.addEventListener('input', updateResult);
 form.addEventListener('submit', saveEvaluation);
+evaluationDateInput.addEventListener('change', () => {
+  selection.date = evaluationDateInput.value;
+  stepOneError.hidden = true;
+  updateSelectionSummary();
+});
 exportButton.addEventListener('click', exportCsv);
 deleteAllButton.addEventListener('click', deleteAllEvaluations);
 window.addEventListener('online', updateConnectionStatus);
@@ -228,7 +243,8 @@ document.querySelectorAll('[data-choice]').forEach((button) => {
 });
 
 document.querySelector('#goToProcessButton').addEventListener('click', () => {
-  if (!selection.farm || !selection.harvestType) {
+  selection.date = evaluationDateInput.value;
+  if (!hasCompleteGeneralData()) {
     stepOneError.hidden = false;
     return;
   }
@@ -257,8 +273,13 @@ document.querySelector('#backToProcessButton').addEventListener('click', () => {
   renderStep();
 });
 
-document.querySelector('#changeSelectionButton').addEventListener('click', () => {
+document.querySelector('#changeGeneralButton').addEventListener('click', () => {
   step = 1;
+  renderStep();
+});
+
+document.querySelector('#changeProcessButton').addEventListener('click', () => {
+  step = 2;
   renderStep();
 });
 
@@ -283,17 +304,22 @@ function selectChoice(button) {
   const key = button.dataset.choice;
   selection[key] = button.dataset.value;
 
-  if (key === 'farm' || key === 'harvestType') stepOneError.hidden = true;
+  if (key === 'farm' || key === 'harvestType' || key === 'variety') stepOneError.hidden = true;
   if (key === 'process') stepTwoError.hidden = true;
 
   renderChoiceState();
   updateSelectionSummary();
 }
 
+function hasCompleteGeneralData() {
+  return Boolean(selection.date && selection.farm && selection.harvestType && selection.variety);
+}
+
 function renderStep() {
   stepOne.hidden = step !== 1;
   stepTwo.hidden = step !== 2;
   formStep.hidden = step !== 3;
+  evaluationDateInput.value = selection.date || getToday();
   renderChoiceState();
   updateSelectionSummary();
 }
@@ -399,9 +425,10 @@ function classifyDamage(value) {
 
 async function saveEvaluation(event) {
   event.preventDefault();
+  selection.date = evaluationDateInput.value;
 
-  if (!selection.farm || !selection.harvestType || !selection.process) {
-    step = !selection.farm || !selection.harvestType ? 1 : 2;
+  if (!hasCompleteGeneralData() || !selection.process) {
+    step = hasCompleteGeneralData() ? 2 : 1;
     renderStep();
     return;
   }
@@ -413,13 +440,12 @@ async function saveEvaluation(event) {
 
   const evaluation = {
     id,
+    date: selection.date,
     farm: selection.farm,
     harvestType: selection.harvestType,
+    variety: selection.variety,
     process: selection.process,
     fruitCode: fruitCode || `Fruto ${evaluations.length + 1}`,
-    variety: form.elements.variety.value.trim(),
-    batch: form.elements.batch.value.trim(),
-    date: form.elements.date.value,
     notes: form.elements.notes.value.trim(),
     quadrants: quadrantData,
     averageDamage,
@@ -442,7 +468,6 @@ async function saveEvaluation(event) {
 
 function resetForm() {
   form.reset();
-  dateInput.valueAsDate = new Date();
   quadrants.forEach((number) => {
     form.elements[`q${number}Total`].value = 0;
     form.elements[`q${number}Affected`].value = 0;
@@ -468,22 +493,23 @@ function renderEvaluations() {
     <article class="evaluation-item">
       <div>
         <h3>${escapeHtml(evaluation.fruitCode)}</h3>
-        <p>${escapeHtml(evaluation.date || 'Sin fecha')} · ${escapeHtml(evaluation.variety || 'Sin variedad')} · ${escapeHtml(evaluation.batch || 'Sin lote')}</p>
-        <p>${escapeHtml(evaluation.farm || 'Sin fundo')} · ${escapeHtml(evaluation.harvestType || 'Sin tipo')} · ${escapeHtml(evaluation.process || 'Sin proceso')}</p>
+        <p>${escapeHtml(evaluation.date || 'Sin fecha')} · ${escapeHtml(evaluation.farm || 'Sin fundo')} · ${escapeHtml(evaluation.harvestType || 'Sin tipo')}</p>
+        <p>${escapeHtml(evaluation.variety || 'Sin variedad')} · ${escapeHtml(evaluation.process || 'Sin proceso')}</p>
       </div>
       <div class="evaluation-score">
         <strong>${formatNumber(evaluation.averageDamage)}%</strong>
         <span>${evaluation.grade}</span>
       </div>
       <div class="photo-flag">Foto registrada: <strong>${evaluation.hasPhoto ? 'Si' : 'No'}</strong></div>
-      <details>
+      <details data-detail-id="${evaluation.id}">
         <summary>Ver cuadrantes</summary>
         <div class="detail-grid">
           ${evaluation.quadrants.map((quadrant) => `
-            <span>C${quadrant.quadrant}: ${quadrant.affected}/${quadrant.total} afectadas (${formatNumber(quadrant.damage)}%)</span>
+            <span>Cuadrante ${quadrant.quadrant}: ${quadrant.total} totales, ${quadrant.affected} afectadas, ${quadrant.healthy} sanas, ${formatNumber(quadrant.damage)}% dano</span>
           `).join('')}
         </div>
-        ${evaluation.notes ? `<p class="notes">${escapeHtml(evaluation.notes)}</p>` : ''}
+        <div class="saved-photo-preview" data-photo-detail-id="${evaluation.id}">${evaluation.hasPhoto ? 'Cargando foto...' : 'Sin foto registrada'}</div>
+        ${evaluation.notes ? `<p class="notes"><strong>Observacion:</strong> ${escapeHtml(evaluation.notes)}</p>` : '<p class="notes"><strong>Observacion:</strong> Sin observacion</p>'}
       </details>
       <button class="link-button" type="button" data-delete-id="${evaluation.id}">Eliminar</button>
     </article>
@@ -492,6 +518,27 @@ function renderEvaluations() {
   evaluationList.querySelectorAll('[data-delete-id]').forEach((button) => {
     button.addEventListener('click', () => deleteEvaluation(button.dataset.deleteId));
   });
+
+  evaluationList.querySelectorAll('details[data-detail-id]').forEach((details) => {
+    details.addEventListener('toggle', () => {
+      if (details.open) renderSavedPhoto(details.dataset.detailId);
+    });
+  });
+}
+
+async function renderSavedPhoto(id) {
+  const target = evaluationList.querySelector(`[data-photo-detail-id="${id}"]`);
+  if (!target) return;
+
+  const photo = await getPhoto(id);
+  if (!photo?.dataUrl) {
+    target.textContent = 'Sin foto registrada';
+    target.className = 'saved-photo-preview empty-saved-photo';
+    return;
+  }
+
+  target.className = 'saved-photo-preview';
+  target.innerHTML = `<img src="${photo.dataUrl}" alt="Foto guardada de la fruta" />`;
 }
 
 async function deleteEvaluation(id) {
@@ -514,11 +561,11 @@ function exportCsv() {
   if (!evaluations.length) return;
 
   const headers = [
-    'fecha', 'fundo', 'tipo_evaluacion', 'proceso', 'codigo_fruto', 'variedad', 'lote',
-    'q1_totales', 'q1_afectadas', 'q1_sanas', 'q1_dano_pct',
-    'q2_totales', 'q2_afectadas', 'q2_sanas', 'q2_dano_pct',
-    'q3_totales', 'q3_afectadas', 'q3_sanas', 'q3_dano_pct',
-    'promedio_dano_pct', 'grado', 'foto_registrada', 'estado_conexion_al_guardar', 'observaciones'
+    'fecha', 'fundo', 'tipo_evaluacion', 'variedad', 'proceso', 'codigo_numero_fruto',
+    'cuadrante_1_lenticelas_totales', 'cuadrante_1_lenticelas_afectadas', 'cuadrante_1_lenticelas_sanas', 'cuadrante_1_porcentaje_dano',
+    'cuadrante_2_lenticelas_totales', 'cuadrante_2_lenticelas_afectadas', 'cuadrante_2_lenticelas_sanas', 'cuadrante_2_porcentaje_dano',
+    'cuadrante_3_lenticelas_totales', 'cuadrante_3_lenticelas_afectadas', 'cuadrante_3_lenticelas_sanas', 'cuadrante_3_porcentaje_dano',
+    'resultado_final', 'clasificacion', 'foto_registrada', 'observacion'
   ];
 
   const rows = evaluations.map((evaluation) => {
@@ -526,10 +573,9 @@ function exportCsv() {
       evaluation.date,
       evaluation.farm,
       evaluation.harvestType,
-      evaluation.process,
-      evaluation.fruitCode,
       evaluation.variety,
-      evaluation.batch
+      evaluation.process,
+      evaluation.fruitCode
     ];
     evaluation.quadrants.forEach((quadrant) => {
       values.push(quadrant.total, quadrant.affected, quadrant.healthy, formatNumber(quadrant.damage));
@@ -538,7 +584,6 @@ function exportCsv() {
       formatNumber(evaluation.averageDamage),
       evaluation.grade,
       evaluation.hasPhoto ? 'Si' : 'No',
-      evaluation.syncStatus,
       evaluation.notes
     );
     return values;
@@ -606,6 +651,10 @@ function savePhoto(id, photo) {
   return withPhotoStore('readwrite', (store) => store.put({ id, ...photo }));
 }
 
+function getPhoto(id) {
+  return withPhotoStore('readonly', (store) => store.get(id));
+}
+
 function deletePhoto(id) {
   return withPhotoStore('readwrite', (store) => store.delete(id));
 }
@@ -616,7 +665,8 @@ function withPhotoStore(mode, action) {
     const store = transaction.objectStore(PHOTO_STORE);
     const request = action(store);
 
-    transaction.oncomplete = () => resolve(request?.result);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
     transaction.onerror = () => reject(transaction.error);
   })).catch(() => undefined);
 }
@@ -654,14 +704,20 @@ function loadEvaluations() {
     const current = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (Array.isArray(current)) return current;
 
-    const legacy = JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY));
-    if (Array.isArray(legacy)) return legacy.map((evaluation) => ({
-      ...evaluation,
-      farm: evaluation.farm || '',
-      harvestType: evaluation.harvestType || '',
-      process: evaluation.process || '',
-      hasPhoto: Boolean(evaluation.hasPhoto)
-    }));
+    for (const key of LEGACY_STORAGE_KEYS) {
+      const legacy = JSON.parse(localStorage.getItem(key));
+      if (Array.isArray(legacy)) {
+        return legacy.map((evaluation) => ({
+          ...evaluation,
+          date: evaluation.date || getToday(),
+          farm: evaluation.farm || '',
+          harvestType: evaluation.harvestType || '',
+          variety: evaluation.variety || '',
+          process: evaluation.process || '',
+          hasPhoto: Boolean(evaluation.hasPhoto)
+        }));
+      }
+    }
 
     return [];
   } catch {
@@ -677,6 +733,10 @@ function updateConnectionStatus() {
   const online = navigator.onLine;
   connectionStatus.textContent = online ? 'Online' : 'Offline';
   connectionStatus.className = `status-pill ${online ? 'online' : 'offline'}`;
+}
+
+function getToday() {
+  return new Date().toISOString().slice(0, 10);
 }
 
 function formatNumber(value) {
