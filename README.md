@@ -2,39 +2,22 @@
 
 Aplicacion web progresiva para evaluar lenticelosis en frutos de palta desde celular, con funcionamiento online y offline.
 
-## Funciones principales
+## Conceptos principales
 
-- Flujo guiado de 3 pasos antes de guardar cada fruto.
-- Seleccion obligatoria de fecha, fundo, tipo de evaluacion, variedad y proceso.
-- Control independiente de frutos registrados por proceso.
-- Codigo o N de fruto como lista obligatoria del 1 al 60.
-- Validacion para evitar codigos repetidos dentro del mismo proceso.
-- Lista de evaluaciones filtrada por el proceso actual.
-- Boton **Guardar proceso** para marcar/finalizar el proceso actual.
-- Seccion **Procesos guardados** para revisar procesos finalizados y sus frutos.
-- Evaluacion de 3 cuadrantes por fruto, cada uno con marco visual 3x3.
-- Calculo automatico de lenticelas sanas, porcentaje de dano por cuadrante, promedio final y grado.
-- Registro opcional de foto de la fruta desde camara o galeria.
-- Guardado local en el dispositivo para trabajar sin internet.
-- Almacenamiento de fotos en IndexedDB y datos de evaluacion/procesos en `localStorage`.
-- Exportacion de todos los procesos a CSV compatible con Excel.
+### Evaluacion general
 
-## Flujo por pasos
+Una evaluacion general agrupa el trabajo de campo por:
 
-### Paso 1 de 3: Datos generales de la evaluacion
+- Fecha.
+- Fundo.
+- Tipo de evaluacion.
+- Variedad.
 
-Campos obligatorios:
+Dentro de una evaluacion general se pueden registrar varios procesos y los frutos de cada proceso.
 
-- Fecha: campo tipo fecha, con la fecha actual por defecto.
-- Fundo: Olmos o Motupe.
-- Tipo de evaluacion: Mecanizada o Manual.
-- Variedad: Hass, Zutano, Maluma, Pinkerton o Ettinger.
+### Proceso
 
-Estos valores se mantienen cuando se usa **Nueva evaluacion** para elegir otro proceso.
-
-### Paso 2 de 3: Proceso a elegir
-
-Cada proceso tiene sus propios frutos registrados y su propio estado:
+Un proceso es una etapa de evaluacion dentro de una evaluacion general. Opciones disponibles:
 
 1. 01. Planta
 2. 02. Balde
@@ -48,7 +31,60 @@ Cada proceso tiene sus propios frutos registrados y su propio estado:
 10. 10. Desp. 20 dias
 11. 11. Desp. 25 dias
 
-### Paso 3 de 3: Formulario de evaluacion
+### Fruto
+
+Cada fruto pertenece a un proceso especifico y contiene:
+
+- Codigo o N de fruto del 1 al 60.
+- Datos de los 3 cuadrantes.
+- Resultado final.
+- Clasificacion.
+- Foto opcional.
+- Observacion.
+
+## Funciones principales
+
+- Flujo guiado de 3 pasos.
+- Registro de evaluaciones generales guardadas.
+- Continuacion de evaluaciones generales anteriores.
+- Control independiente de frutos registrados por proceso.
+- Codigo o N de fruto como lista obligatoria del 1 al 60.
+- Validacion para evitar codigos repetidos dentro del mismo proceso.
+- Lista de frutos filtrada por el proceso actual.
+- Boton **Guardar proceso** para marcar/finalizar el proceso actual.
+- Seccion **Procesos guardados** para revisar procesos de la evaluacion general actual.
+- Evaluacion de 3 cuadrantes por fruto, cada uno con marco visual 3x3.
+- Calculo automatico de lenticelas sanas, porcentaje de dano por cuadrante, promedio final y grado.
+- Registro opcional de foto de la fruta desde camara o galeria.
+- Guardado local en el dispositivo para trabajar sin internet.
+- Almacenamiento de fotos en IndexedDB y datos de evaluacion/procesos en `localStorage`.
+- Exportacion de todas las evaluaciones generales, procesos y frutos a CSV compatible con Excel.
+
+## Flujo por pasos
+
+### Paso 1 de 3: Datos generales de la evaluacion
+
+Campos obligatorios:
+
+- Fecha: campo tipo fecha, con la fecha actual por defecto.
+- Fundo: Olmos o Motupe.
+- Tipo de evaluacion: Mecanizada o Manual.
+- Variedad: Hass, Zutano, Maluma, Pinkerton o Ettinger.
+
+Acciones disponibles:
+
+- **Iniciar evaluacion**: pasa al Paso 2 usando los datos generales seleccionados.
+- **Nueva evaluacion general**: limpia el formulario para iniciar otra evaluacion sin borrar datos anteriores.
+- **Ver detalle**: abre una evaluacion guardada y muestra datos generales, procesos y frutos.
+- **Continuar evaluacion**: carga los datos generales de una evaluacion guardada y lleva al Paso 2.
+
+La seccion **Evaluaciones guardadas** muestra tarjetas con fecha, fundo, tipo, variedad, cantidad de procesos y total de frutos registrados.
+
+### Paso 2 de 3: Seleccion de proceso
+
+Permite elegir un proceso dentro de la evaluacion general actual. Si se continua una evaluacion guardada, se mantienen fecha, fundo, tipo y variedad para agregar un nuevo proceso o continuar uno existente.
+
+### Paso 3 de 3: Formulario de frutos del proceso
 
 Orden de la pantalla:
 
@@ -61,7 +97,17 @@ Orden de la pantalla:
 7. Boton para guardar evaluacion/fruto.
 8. Evaluaciones guardadas del proceso actual.
 9. Boton **Guardar proceso**.
-10. Seccion **Procesos guardados**.
+10. Seccion **Procesos guardados** de la evaluacion general actual.
+
+El boton **Nuevo proceso** vuelve al Paso 2 y mantiene los datos generales actuales. No borra procesos, frutos ni fotos guardadas.
+
+El boton **Volver** muestra la advertencia:
+
+```txt
+¿Seguro que quieres salir? Recomendamos guardar el proceso antes de salir.
+```
+
+Si se cancela, la app permanece en el Paso 3. Si se confirma la salida, vuelve al Paso 1 sin borrar la evaluacion general, procesos, frutos ni fotos.
 
 ## Codigo o N de fruto
 
@@ -79,15 +125,19 @@ Si un fruto ya fue registrado en el proceso actual, aparece marcado como **Regis
 60
 ```
 
-No se puede repetir el mismo codigo dentro del mismo grupo:
+Reglas:
 
-- Fecha.
-- Fundo.
-- Tipo de evaluacion.
-- Variedad.
-- Proceso.
+- No se puede repetir el mismo codigo dentro del mismo proceso de la misma evaluacion general.
+- Si se puede repetir el mismo codigo en otro proceso.
+- Si se puede repetir el mismo codigo en otra evaluacion general diferente.
 
-Cada proceso es independiente. El fruto `1` puede existir una vez en `02. Balde` y tambien una vez en `03. Bin`.
+Ejemplos:
+
+```txt
+Evaluacion A / Proceso 02. Balde / Fruto 1 = permitido una sola vez
+Evaluacion A / Proceso 03. Bin / Fruto 1 = permitido
+Evaluacion B / Proceso 02. Balde / Fruto 1 = permitido
+```
 
 ## Guardar proceso
 
@@ -99,11 +149,26 @@ Al guardar, la app muestra un mensaje como:
 Proceso 02. Balde guardado correctamente.
 ```
 
-Despues se puede usar **Nueva evaluacion** para volver al Paso 2, elegir otro proceso y registrar nuevos frutos manteniendo los datos generales del Paso 1.
+Despues se puede usar **Nuevo proceso** para volver al Paso 2, elegir otro proceso y registrar nuevos frutos manteniendo los datos generales del Paso 1.
+
+## Evaluaciones guardadas
+
+En el Paso 1, cada evaluacion guardada muestra:
+
+- Fecha.
+- Fundo.
+- Tipo de evaluacion.
+- Variedad.
+- Cantidad de procesos registrados.
+- Cantidad total de frutos registrados.
+
+Con **Ver detalle** se muestran los datos generales, procesos registrados y frutos de cada proceso. Al abrir un proceso se pueden revisar codigo de fruto, resultado final, clasificacion, foto registrada, cuadrantes, observacion y foto si existe.
+
+Con **Continuar evaluacion** se cargan sus datos generales y se vuelve al Paso 2 para elegir un proceso.
 
 ## Procesos guardados
 
-La seccion **Procesos guardados** muestra procesos finalizados con formato similar a:
+La seccion **Procesos guardados** del Paso 3 muestra procesos finalizados de la evaluacion general actual con formato similar a:
 
 ```txt
 02. Balde | 20 frutos | Guardado
@@ -115,7 +180,7 @@ Al abrir un proceso guardado se pueden revisar sus evaluaciones, cuadrantes, obs
 
 ## Contadores
 
-En **Evaluaciones guardadas** se muestra el contador del proceso actual:
+En **Evaluaciones guardadas** del Paso 3 se muestra el contador del proceso actual:
 
 ```txt
 Proceso actual 02. Balde: 20 frutos registrados de 60
@@ -123,7 +188,7 @@ Proceso actual 02. Balde: 20 frutos registrados de 60
 Proceso guardado
 ```
 
-La lista de evaluaciones del Paso 3 muestra solo frutos del proceso actual. Los frutos de otros procesos siguen guardados y se pueden ver al seleccionar ese proceso o en **Procesos guardados** si fue finalizado.
+La lista del Paso 3 muestra solo frutos del proceso actual. Los frutos de otros procesos siguen guardados y se pueden ver en **Procesos guardados** o desde el detalle de la evaluacion general en el Paso 1.
 
 ## Regla de calculo
 
@@ -172,8 +237,9 @@ Las fotos se guardan localmente en IndexedDB.
 
 ## Exportacion CSV
 
-El CSV exporta todos los procesos, no solo el proceso actual. Incluye:
+El CSV exporta todas las evaluaciones generales guardadas, todos sus procesos y todos sus frutos. Incluye:
 
+- ID de evaluacion general.
 - Fecha.
 - Fundo.
 - Tipo de evaluacion.

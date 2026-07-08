@@ -27,7 +27,8 @@ select option:disabled {
 
 .counter-summary span,
 .success-message,
-.saved-process-item {
+.saved-process-item,
+.general-evaluation-card {
   border-radius: 8px;
   background: #f5fbf6;
   padding: 10px 12px;
@@ -54,7 +55,8 @@ select option:disabled {
   margin-top: 12px;
 }
 
-.saved-processes-section {
+.saved-processes-section,
+.general-evaluations-section {
   display: grid;
   gap: 12px;
   margin-top: 18px;
@@ -62,12 +64,14 @@ select option:disabled {
   border-top: 1px solid var(--line);
 }
 
-.saved-processes-list {
+.saved-processes-list,
+.general-evaluation-list {
   display: grid;
   gap: 10px;
 }
 
-.saved-process-item {
+.saved-process-item,
+.general-evaluation-card {
   border: 1px solid var(--line);
 }
 
@@ -86,8 +90,96 @@ select option:disabled {
   margin-top: 12px;
 }
 
+.general-evaluation-card {
+  display: grid;
+  gap: 12px;
+}
+
+.general-evaluation-card h3 {
+  margin: 2px 0 0;
+  color: var(--primary-dark);
+}
+
+.general-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.general-summary-grid span {
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 8px 10px;
+}
+
+.general-detail {
+  display: grid;
+  gap: 12px;
+}
+
+.general-detail[hidden] {
+  display: none;
+}
+
+.general-detail-content {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.general-detail-content h4 {
+  margin: 0;
+  color: var(--primary-dark);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  background: rgba(18, 45, 30, 0.45);
+  padding: 18px;
+}
+
+.modal-backdrop[hidden] {
+  display: none;
+}
+
+.confirm-dialog {
+  display: grid;
+  gap: 14px;
+  width: min(100%, 420px);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 18px 48px rgba(18, 45, 30, 0.24);
+  padding: 18px;
+}
+
+.confirm-dialog h2,
+.confirm-dialog p {
+  margin: 0;
+}
+
+.confirm-dialog p {
+  color: var(--muted);
+}
+
+.dialog-actions {
+  justify-content: end;
+}
+
 @media (max-width: 640px) {
   select {
     min-height: 52px;
+  }
+
+  .general-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dialog-actions {
+    grid-template-columns: 1fr;
   }
 }
