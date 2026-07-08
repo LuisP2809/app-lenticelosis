@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Icono de evaluacion de lenticelosis</title>
+  <desc id="desc">Palta verde con puntos de evaluacion sobre fondo claro.</desc>
+  <rect width="512" height="512" rx="108" fill="#e4f2e8" />
+  <path d="M256 70c78 0 146 84 146 188 0 112-61 184-146 184s-146-72-146-184C110 154 178 70 256 70Z" fill="#246b45" />
+  <path d="M256 112c56 0 104 66 104 148 0 88-43 142-104 142s-104-54-104-142c0-82 48-148 104-148Z" fill="#8fbd65" />
+  <circle cx="256" cy="278" r="56" fill="#e7d28b" />
+  <g fill="#174b31">
+    <circle cx="198" cy="184" r="10" />
+    <circle cx="244" cy="164" r="8" />
+    <circle cx="306" cy="198" r="10" />
+    <circle cx="202" cy="246" r="8" />
+    <circle cx="316" cy="278" r="8" />
+    <circle cx="236" cy="366" r="9" />
+    <circle cx="296" cy="350" r="8" />
+  </g>
+  <path d="M286 76c8-31 29-48 63-52 1 37-18 58-56 63" fill="#246b45" />
+</svg>
