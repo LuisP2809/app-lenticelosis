@@ -47,6 +47,9 @@ Cada fruto pertenece a un proceso especifico y contiene:
 - Flujo guiado de 3 pasos.
 - Registro de evaluaciones generales guardadas.
 - Continuacion de evaluaciones generales anteriores.
+- Pantalla principal sin Fundo, Tipo de evaluacion ni Variedad seleccionados por defecto para una nueva evaluacion.
+- Exportacion CSV desde la pantalla principal y desde el Paso 3.
+- Limpieza total protegida con confirmacion y contraseña.
 - Control independiente de frutos registrados por proceso.
 - Codigo o N de fruto como lista obligatoria del 1 al 60.
 - Validacion para evitar codigos repetidos dentro del mismo proceso.
@@ -71,10 +74,13 @@ Campos obligatorios:
 - Tipo de evaluacion: Mecanizada o Manual.
 - Variedad: Hass, Zutano, Maluma, Pinkerton o Ettinger.
 
+Cuando se entra a la pantalla principal para iniciar una evaluacion nueva, Fundo, Tipo de evaluacion y Variedad aparecen sin seleccion marcada, aunque existan evaluaciones guardadas. Solo se cargan selecciones anteriores cuando se usa explicitamente **Continuar evaluacion**.
+
 Acciones disponibles:
 
 - **Iniciar evaluacion**: pasa al Paso 2 usando los datos generales seleccionados.
-- **Nueva evaluacion general**: limpia el formulario para iniciar otra evaluacion sin borrar datos anteriores.
+- **Exportar CSV**: descarga todo el historial guardado.
+- **Limpiar todo**: elimina todas las evaluaciones, procesos, frutos y fotos locales despues de confirmar y escribir la contraseña.
 - **Ver detalle**: abre una evaluacion guardada y muestra datos generales, procesos y frutos.
 - **Continuar evaluacion**: carga los datos generales de una evaluacion guardada y lleva al Paso 2.
 
@@ -107,7 +113,7 @@ El boton **Volver** muestra la advertencia:
 ¿Seguro que quieres salir? Recomendamos guardar el proceso antes de salir.
 ```
 
-Si se cancela, la app permanece en el Paso 3. Si se confirma la salida, vuelve al Paso 1 sin borrar la evaluacion general, procesos, frutos ni fotos.
+Si se cancela, la app permanece en el Paso 3. Si se confirma la salida, vuelve al Paso 1 sin borrar la evaluacion general, procesos, frutos ni fotos. La pantalla principal queda lista para una nueva evaluacion, sin Fundo, Tipo de evaluacion ni Variedad seleccionados.
 
 ## Codigo o N de fruto
 
@@ -165,6 +171,34 @@ En el Paso 1, cada evaluacion guardada muestra:
 Con **Ver detalle** se muestran los datos generales, procesos registrados y frutos de cada proceso. Al abrir un proceso se pueden revisar codigo de fruto, resultado final, clasificacion, foto registrada, cuadrantes, observacion y foto si existe.
 
 Con **Continuar evaluacion** se cargan sus datos generales y se vuelve al Paso 2 para elegir un proceso.
+
+## Limpiar todo
+
+El boton **Limpiar todo** esta en la pantalla principal. Para borrar datos se requiere doble validacion:
+
+1. Confirmar el mensaje:
+
+```txt
+¿Seguro quieres limpiar todo? Se eliminarán todas las evaluaciones.
+```
+
+2. Ingresar la contraseña actual:
+
+```txt
+2026
+```
+
+Si la contraseña es incorrecta, la app muestra:
+
+```txt
+Contraseña incorrecta
+```
+
+Si la contraseña es correcta, se eliminan evaluaciones generales, procesos, frutos, fotos de IndexedDB y datos locales relacionados. La pantalla principal vuelve al estado inicial y muestra:
+
+```txt
+Todas las evaluaciones fueron eliminadas.
+```
 
 ## Procesos guardados
 
@@ -237,7 +271,9 @@ Las fotos se guardan localmente en IndexedDB.
 
 ## Exportacion CSV
 
-El CSV exporta todas las evaluaciones generales guardadas, todos sus procesos y todos sus frutos. Incluye:
+El boton **Exportar CSV** de la pantalla principal exporta todas las evaluaciones generales guardadas, todos sus procesos y todos sus frutos. El boton de exportacion del Paso 3 usa el mismo historial completo.
+
+El archivo incluye:
 
 - ID de evaluacion general.
 - Fecha.

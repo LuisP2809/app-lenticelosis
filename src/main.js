@@ -7,6 +7,7 @@ const DB_NAME = 'lenticelosis-fotos-db';
 const DB_VERSION = 1;
 const PHOTO_STORE = 'fruitPhotos';
 const MAX_FRUITS_PER_PROCESS = 60;
+const CLEAR_ALL_PASSWORD = '2026';
 const quadrants = [1, 2, 3];
 const fruitCodes = Array.from({ length: MAX_FRUITS_PER_PROCESS }, (_, index) => String(index + 1));
 const farms = ['Olmos', 'Motupe'];
@@ -54,8 +55,12 @@ app.innerHTML = `
           <h2 id="stepOneTitle">Datos generales de la evaluacion</h2>
           <p class="muted">Completa todos los campos para iniciar o continuar una evaluacion general.</p>
         </div>
-        <button id="newGeneralButton" class="ghost-button framed-button" type="button">Nueva evaluacion general</button>
+        <div class="button-row main-actions">
+          <button id="mainExportButton" class="secondary-button" type="button">Exportar CSV</button>
+          <button id="clearAllMainButton" class="danger-button" type="button">Limpiar todo</button>
+        </div>
       </div>
+      <div id="cleanupMessage" class="success-message" hidden></div>
 
       <label>
         Fecha
@@ -222,6 +227,32 @@ app.innerHTML = `
       </div>
     </section>
   </div>
+
+  <div id="clearConfirmDialog" class="modal-backdrop" hidden>
+    <section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="clearConfirmTitle">
+      <h2 id="clearConfirmTitle">Limpiar todo</h2>
+      <p>¿Seguro quieres limpiar todo? Se eliminarán todas las evaluaciones.</p>
+      <div class="button-row dialog-actions">
+        <button id="cancelClearButton" class="secondary-button" type="button">Cancelar</button>
+        <button id="acceptClearButton" class="danger-button" type="button">Sí</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="passwordDialog" class="modal-backdrop" hidden>
+    <section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="passwordDialogTitle">
+      <h2 id="passwordDialogTitle">Ingrese contraseña</h2>
+      <label>
+        Contraseña
+        <input id="clearPasswordInput" type="password" inputmode="numeric" autocomplete="off" />
+      </label>
+      <p id="passwordError" class="form-error" hidden>Contraseña incorrecta</p>
+      <div class="button-row dialog-actions">
+        <button id="cancelPasswordButton" class="secondary-button" type="button">Cancelar</button>
+        <button id="confirmPasswordButton" class="danger-button" type="button">Limpiar todo</button>
+      </div>
+    </section>
+  </div>
 `;
 
 const stepOne = document.querySelector('#stepOne');
@@ -237,10 +268,13 @@ const finalGrade = document.querySelector('#finalGrade');
 const evaluationList = document.querySelector('#evaluationList');
 const generalEvaluationList = document.querySelector('#generalEvaluationList');
 const summaryText = document.querySelector('#summaryText');
+const mainExportButton = document.querySelector('#mainExportButton');
+const clearAllMainButton = document.querySelector('#clearAllMainButton');
 const exportButton = document.querySelector('#exportButton');
 const deleteAllButton = document.querySelector('#deleteAllButton');
 const saveProcessButton = document.querySelector('#saveProcessButton');
 const processMessage = document.querySelector('#processMessage');
+const cleanupMessage = document.querySelector('#cleanupMessage');
 const savedProcessesList = document.querySelector('#savedProcessesList');
 const connectionStatus = document.querySelector('#connectionStatus');
 const evaluationDateInput = document.querySelector('#evaluationDate');
@@ -249,6 +283,10 @@ const galleryInput = document.querySelector('#galleryInput');
 const photoPreview = document.querySelector('#photoPreview');
 const removePhotoButton = document.querySelector('#removePhotoButton');
 const exitDialog = document.querySelector('#exitDialog');
+const clearConfirmDialog = document.querySelector('#clearConfirmDialog');
+const passwordDialog = document.querySelector('#passwordDialog');
+const clearPasswordInput = document.querySelector('#clearPasswordInput');
+const passwordError = document.querySelector('#passwordError');
 
 evaluationDateInput.value = selection.date;
 renderQuadrants();
@@ -269,12 +307,15 @@ evaluationDateInput.addEventListener('change', () => {
   selection.date = evaluationDateInput.value;
   selection.process = '';
   stepOneError.hidden = true;
+  cleanupMessage.hidden = true;
   updateSelectionSummary();
   renderFruitOptions();
   renderSavedProcesses();
 });
+mainExportButton.addEventListener('click', exportCsv);
+clearAllMainButton.addEventListener('click', beginClearAllFlow);
 exportButton.addEventListener('click', exportCsv);
-deleteAllButton.addEventListener('click', deleteAllEvaluations);
+deleteAllButton.addEventListener('click', beginClearAllFlow);
 saveProcessButton.addEventListener('click', saveCurrentProcess);
 window.addEventListener('online', updateConnectionStatus);
 window.addEventListener('offline', updateConnectionStatus);
@@ -290,17 +331,13 @@ document.querySelector('#goToProcessButton').addEventListener('click', () => {
     return;
   }
   stepOneError.hidden = true;
+  cleanupMessage.hidden = true;
   selection.process = '';
   step = 2;
   renderStep();
 });
 
-document.querySelector('#newGeneralButton').addEventListener('click', startNewGeneralEvaluation);
-
-document.querySelector('#backToInitialButton').addEventListener('click', () => {
-  step = 1;
-  renderStep();
-});
+document.querySelector('#backToInitialButton').addEventListener('click', resetToMainInitialState);
 
 document.querySelector('#goToFormButton').addEventListener('click', () => {
   if (!selection.process) {
@@ -316,8 +353,17 @@ document.querySelector('#backToProcessButton').addEventListener('click', showExi
 document.querySelector('#cancelExitButton').addEventListener('click', hideExitDialog);
 document.querySelector('#confirmExitButton').addEventListener('click', () => {
   hideExitDialog();
-  step = 1;
-  renderStep();
+  resetToMainInitialState();
+});
+document.querySelector('#cancelClearButton').addEventListener('click', hideClearDialogs);
+document.querySelector('#acceptClearButton').addEventListener('click', showPasswordDialog);
+document.querySelector('#cancelPasswordButton').addEventListener('click', hideClearDialogs);
+document.querySelector('#confirmPasswordButton').addEventListener('click', confirmClearAll);
+clearPasswordInput.addEventListener('input', () => {
+  passwordError.hidden = true;
+});
+clearPasswordInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') confirmClearAll();
 });
 
 document.querySelector('#newEvaluationButton').addEventListener('click', () => {
@@ -346,6 +392,7 @@ function selectChoice(button) {
 
   if (key === 'farm' || key === 'harvestType' || key === 'variety') {
     stepOneError.hidden = true;
+    cleanupMessage.hidden = true;
     selection.process = '';
   }
   if (key === 'process') stepTwoError.hidden = true;
@@ -369,6 +416,7 @@ function renderStep() {
   evaluationDateInput.value = selection.date || getToday();
   processMessage.hidden = true;
   hideExitDialog();
+  hideClearDialogs();
   renderChoiceState();
   updateSelectionSummary();
   renderFruitOptions();
@@ -558,8 +606,11 @@ function resetForm() {
 function renderEvaluations() {
   renderCounters();
 
+  const hasStoredData = evaluations.length > 0 || Object.keys(savedProcesses).length > 0;
+  mainExportButton.disabled = evaluations.length === 0;
   exportButton.disabled = evaluations.length === 0;
-  deleteAllButton.disabled = evaluations.length === 0;
+  clearAllMainButton.disabled = !hasStoredData;
+  deleteAllButton.disabled = !hasStoredData;
   saveProcessButton.disabled = !selection.process || getCurrentProcessEvaluations().length === 0;
 
   const currentEvaluations = getCurrentProcessEvaluations();
@@ -767,6 +818,7 @@ function continueGeneralEvaluation(index) {
   if (!summary) return;
 
   resetForm();
+  cleanupMessage.hidden = true;
   selection = {
     date: summary.date,
     farm: summary.farm,
@@ -778,7 +830,7 @@ function continueGeneralEvaluation(index) {
   renderStep();
 }
 
-function startNewGeneralEvaluation() {
+function resetToMainInitialState() {
   resetForm();
   selection = getEmptySelection();
   stepOneError.hidden = true;
@@ -793,6 +845,55 @@ function showExitDialog() {
 
 function hideExitDialog() {
   exitDialog.hidden = true;
+}
+
+function beginClearAllFlow() {
+  if (evaluations.length === 0 && Object.keys(savedProcesses).length === 0) return;
+  cleanupMessage.hidden = true;
+  passwordError.hidden = true;
+  clearPasswordInput.value = '';
+  clearConfirmDialog.hidden = false;
+}
+
+function showPasswordDialog() {
+  clearConfirmDialog.hidden = true;
+  passwordError.hidden = true;
+  clearPasswordInput.value = '';
+  passwordDialog.hidden = false;
+  clearPasswordInput.focus();
+}
+
+function hideClearDialogs() {
+  clearConfirmDialog.hidden = true;
+  passwordDialog.hidden = true;
+  passwordError.hidden = true;
+}
+
+async function confirmClearAll() {
+  if (clearPasswordInput.value !== CLEAR_ALL_PASSWORD) {
+    passwordError.hidden = false;
+    clearPasswordInput.focus();
+    return;
+  }
+
+  hideClearDialogs();
+  await clearAllStoredData();
+}
+
+async function clearAllStoredData() {
+  evaluations = [];
+  savedProcesses = {};
+  generalSummariesCache = [];
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(PROCESS_STORAGE_KEY);
+  LEGACY_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
+  await clearPhotoStore();
+  resetForm();
+  selection = getEmptySelection();
+  step = 1;
+  renderStep();
+  cleanupMessage.textContent = 'Todas las evaluaciones fueron eliminadas.';
+  cleanupMessage.hidden = false;
 }
 
 function getProcessSummaries() {
@@ -872,20 +973,6 @@ async function deleteEvaluation(id) {
   evaluations = evaluations.filter((evaluation) => evaluation.id !== id);
   await deletePhoto(id);
   persistEvaluations();
-  renderEvaluations();
-  renderFruitOptions();
-  renderSavedProcesses();
-  renderGeneralEvaluations();
-}
-
-async function deleteAllEvaluations() {
-  if (!confirm('Se borraran todas las evaluaciones guardadas en este dispositivo.')) return;
-  const ids = evaluations.map((evaluation) => evaluation.id);
-  evaluations = [];
-  savedProcesses = {};
-  await Promise.all(ids.map((id) => deletePhoto(id)));
-  persistEvaluations();
-  persistSavedProcesses();
   renderEvaluations();
   renderFruitOptions();
   renderSavedProcesses();
@@ -994,6 +1081,10 @@ function getPhoto(id) {
 
 function deletePhoto(id) {
   return withPhotoStore('readwrite', (store) => store.delete(id));
+}
+
+function clearPhotoStore() {
+  return withPhotoStore('readwrite', (store) => store.clear());
 }
 
 function withPhotoStore(mode, action) {
