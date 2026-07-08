@@ -48,6 +48,8 @@ Cada fruto pertenece a un proceso especifico y contiene:
 - Registro de evaluaciones generales guardadas.
 - Continuacion de evaluaciones generales anteriores.
 - Pantalla principal sin Fundo, Tipo de evaluacion ni Variedad seleccionados por defecto para una nueva evaluacion.
+- Aviso para abrir la app una vez con conexion y activar el modo offline.
+- Indicador visual automatico de **Modo online** y **Modo offline**.
 - Exportacion CSV desde la pantalla principal y desde el Paso 3.
 - Limpieza total protegida con confirmacion y contraseña.
 - Control independiente de frutos registrados por proceso.
@@ -291,7 +293,15 @@ El archivo incluye:
 
 ## Modo offline
 
-La app usa un service worker para guardar la pantalla principal y recursos basicos despues de la primera visita. Las evaluaciones, estados de procesos y fotos quedan en el navegador del dispositivo.
+La app muestra este aviso al abrir:
+
+```txt
+Para usar la app sin internet, primero abre la aplicación una vez con conexión para activar el modo offline.
+```
+
+La app usa un service worker para guardar la pantalla principal y recursos basicos despues de la primera visita con conexion. El indicador visual cambia automaticamente entre **Modo online** y **Modo offline** segun la conexion del celular.
+
+Las evaluaciones, estados de procesos y fotos quedan en el navegador del dispositivo.
 
 Al borrar datos del navegador o desinstalar la PWA, tambien pueden eliminarse las evaluaciones y fotos locales. Exporta CSV con frecuencia para respaldar los datos de campo.
 
