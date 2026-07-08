@@ -30,6 +30,16 @@ body {
   color: var(--ink);
 }
 
+.offline-notice {
+  border-bottom: 1px solid #c9e1cf;
+  background: #f5fbf6;
+  color: var(--primary-dark);
+  padding: 10px clamp(16px, 4vw, 36px);
+  font-size: 0.92rem;
+  font-weight: 800;
+  text-align: center;
+}
+
 button,
 input,
 textarea {
@@ -103,15 +113,33 @@ h3 {
   font-weight: 700;
 }
 
+.status-pill.online,
+.status-pill.offline {
+  font-size: 0;
+}
+
+.status-pill.online::after,
+.status-pill.offline::after {
+  font-size: 0.82rem;
+}
+
 .status-pill.online {
   background: #dff5e6;
   color: #13532e;
+}
+
+.status-pill.online::after {
+  content: "Modo online";
 }
 
 .status-pill.offline,
 .status-pill.warning {
   background: #fff0c2;
   color: var(--warning);
+}
+
+.status-pill.offline::after {
+  content: "Modo offline";
 }
 
 .step-layout {
@@ -612,6 +640,11 @@ summary {
 
   .status-pill {
     justify-self: start;
+  }
+
+  .offline-notice {
+    padding-inline: 14px;
+    text-align: left;
   }
 
   .step-layout {
