@@ -5,7 +5,8 @@ const APP_SHELL = [
   './manifest.json',
   './icon.svg',
   './src/main.js',
-  './src/styles.css'
+  './src/styles.css',
+  './src/process.css'
 ].map((path) => new URL(path, self.registration.scope).toString());
 
 self.addEventListener('install', (event) => {

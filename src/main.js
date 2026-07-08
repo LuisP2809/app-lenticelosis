@@ -1,11 +1,14 @@
 import './styles.css';
 
 const STORAGE_KEY = 'lenticelosis-evaluaciones-v3';
+const PROCESS_STORAGE_KEY = 'lenticelosis-procesos-v1';
 const LEGACY_STORAGE_KEYS = ['lenticelosis-evaluaciones-v2', 'lenticelosis-evaluaciones-v1'];
 const DB_NAME = 'lenticelosis-fotos-db';
 const DB_VERSION = 1;
 const PHOTO_STORE = 'fruitPhotos';
+const MAX_FRUITS_PER_PROCESS = 60;
 const quadrants = [1, 2, 3];
+const fruitCodes = Array.from({ length: MAX_FRUITS_PER_PROCESS }, (_, index) => String(index + 1));
 const farms = ['Olmos', 'Motupe'];
 const harvestTypes = ['Mecanizada', 'Manual'];
 const varieties = ['Hass', 'Zutano', 'Maluma', 'Pinkerton', 'Ettinger'];
@@ -24,6 +27,7 @@ const processes = [
 ];
 
 let evaluations = loadEvaluations();
+let savedProcesses = loadSavedProcesses();
 let step = 1;
 let selection = {
   date: getToday(),
@@ -42,7 +46,7 @@ app.innerHTML = `
     <div>
       <p class="eyebrow">Palta · Lenticelosis</p>
       <h1>Evaluacion de frutos</h1>
-      <p class="subtitle">Registra datos generales, elige proceso y luego evalua los cuadrantes del fruto.</p>
+      <p class="subtitle">Registra datos generales, elige proceso y evalua frutos del 1 al 60.</p>
     </div>
     <span id="connectionStatus" class="status-pill">Comprobando...</span>
   </header>
@@ -131,7 +135,7 @@ app.innerHTML = `
           <form id="evaluationForm" class="evaluation-form">
             <label>
               Codigo o N de fruto
-              <input id="fruitCode" name="fruitCode" type="text" placeholder="Ej. 001" autocomplete="off" />
+              <select id="fruitCode" name="fruitCode" required></select>
             </label>
             <p id="fruitCodeError" class="form-error" hidden>Este Codigo o N de fruto ya fue registrado para este proceso. Ingresa otro codigo.</p>
 
@@ -176,7 +180,7 @@ app.innerHTML = `
               <textarea id="notes" name="notes" rows="3" placeholder="Notas de campo, condicion del fruto o comentarios"></textarea>
             </label>
 
-            <button class="primary-button" type="submit">Guardar evaluacion</button>
+            <button class="primary-button" type="submit">Guardar evaluacion/fruto</button>
           </form>
         </section>
 
@@ -191,7 +195,13 @@ app.innerHTML = `
               <button id="deleteAllButton" class="danger-button" type="button">Borrar todo</button>
             </div>
           </div>
+          <div id="processMessage" class="success-message" hidden></div>
           <div id="evaluationList" class="evaluation-list"></div>
+          <button id="saveProcessButton" class="primary-button wide-button save-process-button" type="button">Guardar proceso</button>
+          <section class="saved-processes-section" aria-labelledby="savedProcessesTitle">
+            <h2 id="savedProcessesTitle">Procesos guardados</h2>
+            <div id="savedProcessesList" class="saved-processes-list"></div>
+          </section>
         </section>
       </div>
     </section>
@@ -212,6 +222,9 @@ const evaluationList = document.querySelector('#evaluationList');
 const summaryText = document.querySelector('#summaryText');
 const exportButton = document.querySelector('#exportButton');
 const deleteAllButton = document.querySelector('#deleteAllButton');
+const saveProcessButton = document.querySelector('#saveProcessButton');
+const processMessage = document.querySelector('#processMessage');
+const savedProcessesList = document.querySelector('#savedProcessesList');
 const connectionStatus = document.querySelector('#connectionStatus');
 const evaluationDateInput = document.querySelector('#evaluationDate');
 const cameraInput = document.querySelector('#cameraInput');
@@ -221,13 +234,15 @@ const removePhotoButton = document.querySelector('#removePhotoButton');
 
 evaluationDateInput.value = selection.date;
 renderQuadrants();
+renderFruitOptions();
 renderEvaluations();
+renderSavedProcesses();
 updateResult();
 updateConnectionStatus();
 renderStep();
 
 form.addEventListener('input', updateResult);
-form.elements.fruitCode.addEventListener('input', () => {
+form.elements.fruitCode.addEventListener('change', () => {
   fruitCodeError.hidden = true;
 });
 form.addEventListener('submit', saveEvaluation);
@@ -235,9 +250,11 @@ evaluationDateInput.addEventListener('change', () => {
   selection.date = evaluationDateInput.value;
   stepOneError.hidden = true;
   updateSelectionSummary();
+  renderFruitOptions();
 });
 exportButton.addEventListener('click', exportCsv);
 deleteAllButton.addEventListener('click', deleteAllEvaluations);
+saveProcessButton.addEventListener('click', saveCurrentProcess);
 window.addEventListener('online', updateConnectionStatus);
 window.addEventListener('offline', updateConnectionStatus);
 
@@ -303,8 +320,10 @@ function selectChoice(button) {
   if (key === 'farm' || key === 'harvestType' || key === 'variety') stepOneError.hidden = true;
   if (key === 'process') stepTwoError.hidden = true;
 
+  processMessage.hidden = true;
   renderChoiceState();
   updateSelectionSummary();
+  renderFruitOptions();
   renderEvaluations();
 }
 
@@ -317,9 +336,12 @@ function renderStep() {
   stepTwo.hidden = step !== 2;
   formStep.hidden = step !== 3;
   evaluationDateInput.value = selection.date || getToday();
+  processMessage.hidden = true;
   renderChoiceState();
   updateSelectionSummary();
+  renderFruitOptions();
   renderEvaluations();
+  renderSavedProcesses();
 }
 
 function renderChoiceState() {
@@ -334,6 +356,19 @@ function updateSelectionSummary() {
     const key = item.dataset.summary;
     item.textContent = selection[key] || '-';
   });
+}
+
+function renderFruitOptions() {
+  const currentValue = form.elements.fruitCode?.value || '';
+  const registeredCodes = new Set(getCurrentProcessEvaluations().map((evaluation) => evaluation.normalizedFruitCode || normalizeFruitCode(evaluation.fruitCode)));
+  const options = ['<option value="">Selecciona fruto</option>'].concat(fruitCodes.map((code) => {
+    const normalized = normalizeFruitCode(code);
+    const registered = registeredCodes.has(normalized);
+    return `<option value="${code}" ${registered ? 'disabled' : ''}>${code}${registered ? ' - Registrado' : ''}</option>`;
+  }));
+
+  form.elements.fruitCode.innerHTML = options.join('');
+  form.elements.fruitCode.value = registeredCodes.has(normalizeFruitCode(currentValue)) ? '' : currentValue;
 }
 
 function renderQuadrants() {
@@ -431,16 +466,15 @@ async function saveEvaluation(event) {
     return;
   }
 
-  const quadrantData = getQuadrantData();
-  const averageDamage = getAverageDamage(quadrantData);
-  const fruitCode = form.elements.fruitCode.value.trim() || `Fruto ${evaluations.length + 1}`;
-
-  if (hasDuplicateFruitCode(fruitCode)) {
+  const fruitCode = form.elements.fruitCode.value;
+  if (!fruitCode || hasDuplicateFruitCode(fruitCode)) {
     fruitCodeError.hidden = false;
     form.elements.fruitCode.focus();
     return;
   }
 
+  const quadrantData = getQuadrantData();
+  const averageDamage = getAverageDamage(quadrantData);
   const id = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}`;
   const evaluation = {
     id,
@@ -451,6 +485,7 @@ async function saveEvaluation(event) {
     process: selection.process,
     fruitCode,
     normalizedFruitCode: normalizeFruitCode(fruitCode),
+    processKey: getCurrentProcessKey(),
     notes: form.elements.notes.value.trim(),
     quadrants: quadrantData,
     averageDamage,
@@ -468,6 +503,8 @@ async function saveEvaluation(event) {
   evaluations = [evaluation, ...evaluations];
   persistEvaluations();
   renderEvaluations();
+  renderFruitOptions();
+  renderSavedProcesses();
   resetForm();
 }
 
@@ -480,6 +517,7 @@ function resetForm() {
   });
   clearCurrentPhoto();
   updateResult();
+  renderFruitOptions();
 }
 
 function renderEvaluations() {
@@ -487,13 +525,20 @@ function renderEvaluations() {
 
   exportButton.disabled = evaluations.length === 0;
   deleteAllButton.disabled = evaluations.length === 0;
+  saveProcessButton.disabled = !selection.process || getCurrentProcessEvaluations().length === 0;
 
-  if (!evaluations.length) {
-    evaluationList.innerHTML = '<p class="empty-state">Las evaluaciones apareceran aqui despues de guardar el primer fruto.</p>';
+  const currentEvaluations = getCurrentProcessEvaluations();
+  if (!currentEvaluations.length) {
+    evaluationList.innerHTML = '<p class="empty-state">Este proceso aun no tiene frutos registrados.</p>';
     return;
   }
 
-  evaluationList.innerHTML = evaluations.map((evaluation) => `
+  evaluationList.innerHTML = currentEvaluations.map((evaluation) => renderEvaluationCard(evaluation)).join('');
+  attachEvaluationEvents(evaluationList);
+}
+
+function renderEvaluationCard(evaluation) {
+  return `
     <article class="evaluation-item">
       <div>
         <h3>${escapeHtml(evaluation.fruitCode)}</h3>
@@ -517,33 +562,118 @@ function renderEvaluations() {
       </details>
       <button class="link-button" type="button" data-delete-id="${evaluation.id}">Eliminar</button>
     </article>
-  `).join('');
+  `;
+}
 
-  evaluationList.querySelectorAll('[data-delete-id]').forEach((button) => {
+function attachEvaluationEvents(container) {
+  container.querySelectorAll('[data-delete-id]').forEach((button) => {
     button.addEventListener('click', () => deleteEvaluation(button.dataset.deleteId));
   });
 
-  evaluationList.querySelectorAll('details[data-detail-id]').forEach((details) => {
+  container.querySelectorAll('details[data-detail-id]').forEach((details) => {
     details.addEventListener('toggle', () => {
-      if (details.open) renderSavedPhoto(details.dataset.detailId);
+      if (details.open) renderSavedPhoto(details.dataset.detailId, container);
     });
   });
 }
 
 function renderCounters() {
-  const total = evaluations.length;
   const processTotal = getCurrentProcessEvaluations().length;
+  const pending = Math.max(MAX_FRUITS_PER_PROCESS - processTotal, 0);
   const processLabel = selection.process || 'sin proceso seleccionado';
-  const fruitWord = (amount) => amount === 1 ? 'fruto' : 'frutos';
+  const saved = isCurrentProcessSaved();
 
   summaryText.innerHTML = `
-    <span>Total general: <strong>${total}</strong> ${fruitWord(total)}</span>
-    <span>Proceso actual ${escapeHtml(processLabel)}: <strong>${processTotal}</strong> ${fruitWord(processTotal)}</span>
+    <span>Proceso actual ${escapeHtml(processLabel)}: <strong>${processTotal}</strong> frutos registrados de ${MAX_FRUITS_PER_PROCESS}</span>
+    <span><strong>${pending}</strong> pendientes</span>
+    ${saved ? '<span class="saved-status">Proceso guardado</span>' : ''}
   `;
 }
 
-async function renderSavedPhoto(id) {
-  const target = evaluationList.querySelector(`[data-photo-detail-id="${id}"]`);
+function saveCurrentProcess() {
+  if (!selection.process) return;
+
+  const processKey = getCurrentProcessKey();
+  savedProcesses[processKey] = {
+    key: processKey,
+    date: selection.date,
+    farm: selection.farm,
+    harvestType: selection.harvestType,
+    variety: selection.variety,
+    process: selection.process,
+    status: 'Guardado',
+    savedAt: new Date().toISOString()
+  };
+
+  persistSavedProcesses();
+  renderCounters();
+  renderSavedProcesses();
+  processMessage.textContent = `Proceso ${selection.process} guardado correctamente.`;
+  processMessage.hidden = false;
+}
+
+function renderSavedProcesses() {
+  const processItems = getProcessSummaries().filter((item) => item.status === 'Guardado');
+
+  if (!processItems.length) {
+    savedProcessesList.innerHTML = '<p class="empty-state">Aun no hay procesos guardados.</p>';
+    return;
+  }
+
+  savedProcessesList.innerHTML = processItems.map((item) => `
+    <details class="saved-process-item" data-process-key="${escapeHtml(item.key)}">
+      <summary>${escapeHtml(item.process)} | ${item.count} frutos | ${item.status}</summary>
+      <p>${escapeHtml(item.date)} · ${escapeHtml(item.farm)} · ${escapeHtml(item.harvestType)} · ${escapeHtml(item.variety)}</p>
+      <div class="saved-process-evaluations" data-process-evaluations="${escapeHtml(item.key)}"></div>
+    </details>
+  `).join('');
+
+  savedProcessesList.querySelectorAll('details[data-process-key]').forEach((details) => {
+    details.addEventListener('toggle', () => {
+      if (!details.open) return;
+      const key = details.dataset.processKey;
+      const target = savedProcessesList.querySelector(`[data-process-evaluations="${cssEscape(key)}"]`);
+      if (!target) return;
+      const items = evaluations.filter((evaluation) => getProcessKeyFromEvaluation(evaluation) === key);
+      target.innerHTML = items.length ? items.map((evaluation) => renderEvaluationCard(evaluation)).join('') : '<p class="empty-state">Sin frutos en este proceso.</p>';
+      attachEvaluationEvents(target);
+    });
+  });
+}
+
+function getProcessSummaries() {
+  const summaries = new Map();
+
+  evaluations.forEach((evaluation) => {
+    const key = getProcessKeyFromEvaluation(evaluation);
+    if (!summaries.has(key)) {
+      summaries.set(key, {
+        key,
+        date: evaluation.date,
+        farm: evaluation.farm,
+        harvestType: evaluation.harvestType,
+        variety: evaluation.variety,
+        process: evaluation.process,
+        count: 0,
+        status: getProcessStatus(key)
+      });
+    }
+    summaries.get(key).count += 1;
+  });
+
+  Object.values(savedProcesses).forEach((process) => {
+    if (!summaries.has(process.key)) {
+      summaries.set(process.key, { ...process, count: 0, status: 'Guardado' });
+    } else {
+      summaries.get(process.key).status = 'Guardado';
+    }
+  });
+
+  return Array.from(summaries.values()).sort((a, b) => `${b.date}${b.process}`.localeCompare(`${a.date}${a.process}`));
+}
+
+async function renderSavedPhoto(id, root = document) {
+  const target = root.querySelector(`[data-photo-detail-id="${id}"]`);
   if (!target) return;
 
   const photo = await getPhoto(id);
@@ -562,22 +692,28 @@ async function deleteEvaluation(id) {
   await deletePhoto(id);
   persistEvaluations();
   renderEvaluations();
+  renderFruitOptions();
+  renderSavedProcesses();
 }
 
 async function deleteAllEvaluations() {
   if (!confirm('Se borraran todas las evaluaciones guardadas en este dispositivo.')) return;
   const ids = evaluations.map((evaluation) => evaluation.id);
   evaluations = [];
+  savedProcesses = {};
   await Promise.all(ids.map((id) => deletePhoto(id)));
   persistEvaluations();
+  persistSavedProcesses();
   renderEvaluations();
+  renderFruitOptions();
+  renderSavedProcesses();
 }
 
 function exportCsv() {
   if (!evaluations.length) return;
 
   const headers = [
-    'fecha', 'fundo', 'tipo_evaluacion', 'variedad', 'proceso', 'codigo_numero_fruto',
+    'fecha', 'fundo', 'tipo_evaluacion', 'variedad', 'proceso', 'estado_proceso', 'codigo_numero_fruto',
     'cuadrante_1_lenticelas_totales', 'cuadrante_1_lenticelas_afectadas', 'cuadrante_1_lenticelas_sanas', 'cuadrante_1_porcentaje_dano',
     'cuadrante_2_lenticelas_totales', 'cuadrante_2_lenticelas_afectadas', 'cuadrante_2_lenticelas_sanas', 'cuadrante_2_porcentaje_dano',
     'cuadrante_3_lenticelas_totales', 'cuadrante_3_lenticelas_afectadas', 'cuadrante_3_lenticelas_sanas', 'cuadrante_3_porcentaje_dano',
@@ -591,6 +727,7 @@ function exportCsv() {
       evaluation.harvestType,
       evaluation.variety,
       evaluation.process,
+      getProcessStatus(getProcessKeyFromEvaluation(evaluation)),
       evaluation.fruitCode
     ];
     evaluation.quadrants.forEach((quadrant) => {
@@ -723,17 +860,40 @@ function getCurrentProcessEvaluations() {
 }
 
 function isSameProcessGroup(evaluation) {
-  return evaluation.date === selection.date
-    && evaluation.farm === selection.farm
-    && evaluation.harvestType === selection.harvestType
-    && evaluation.variety === selection.variety
-    && evaluation.process === selection.process;
+  return getProcessKeyFromEvaluation(evaluation) === getCurrentProcessKey();
+}
+
+function getCurrentProcessKey() {
+  return getProcessKey(selection);
+}
+
+function getProcessKeyFromEvaluation(evaluation) {
+  return evaluation.processKey || getProcessKey(evaluation);
+}
+
+function getProcessKey(item) {
+  return [item.date, item.farm, item.harvestType, item.variety, item.process]
+    .map((value) => String(value ?? '').trim().toLocaleLowerCase('es-PE'))
+    .join('|');
+}
+
+function getProcessStatus(key) {
+  return savedProcesses[key]?.status || 'En edicion';
+}
+
+function isCurrentProcessSaved() {
+  return getProcessStatus(getCurrentProcessKey()) === 'Guardado';
 }
 
 function normalizeFruitCode(value) {
   const text = String(value ?? '').trim();
   if (/^\d+$/.test(text)) return String(Number.parseInt(text, 10));
   return text.replace(/\s+/g, ' ').toLocaleLowerCase('es-PE');
+}
+
+function cssEscape(value) {
+  if (globalThis.CSS?.escape) return CSS.escape(value);
+  return String(value).replaceAll('"', '\\"');
 }
 
 function toCsvCell(value) {
@@ -758,20 +918,36 @@ function loadEvaluations() {
 }
 
 function hydrateEvaluations(items) {
-  return items.map((evaluation) => ({
-    ...evaluation,
-    date: evaluation.date || getToday(),
-    farm: evaluation.farm || '',
-    harvestType: evaluation.harvestType || '',
-    variety: evaluation.variety || '',
-    process: evaluation.process || '',
-    hasPhoto: Boolean(evaluation.hasPhoto),
-    normalizedFruitCode: evaluation.normalizedFruitCode || normalizeFruitCode(evaluation.fruitCode)
-  }));
+  return items.map((evaluation) => {
+    const hydrated = {
+      ...evaluation,
+      date: evaluation.date || getToday(),
+      farm: evaluation.farm || '',
+      harvestType: evaluation.harvestType || '',
+      variety: evaluation.variety || '',
+      process: evaluation.process || '',
+      hasPhoto: Boolean(evaluation.hasPhoto),
+      normalizedFruitCode: evaluation.normalizedFruitCode || normalizeFruitCode(evaluation.fruitCode)
+    };
+    hydrated.processKey = hydrated.processKey || getProcessKey(hydrated);
+    return hydrated;
+  });
+}
+
+function loadSavedProcesses() {
+  try {
+    return JSON.parse(localStorage.getItem(PROCESS_STORAGE_KEY)) || {};
+  } catch {
+    return {};
+  }
 }
 
 function persistEvaluations() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(evaluations));
+}
+
+function persistSavedProcesses() {
+  localStorage.setItem(PROCESS_STORAGE_KEY, JSON.stringify(savedProcesses));
 }
 
 function updateConnectionStatus() {

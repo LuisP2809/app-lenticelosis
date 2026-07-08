@@ -7,34 +7,34 @@ Aplicacion web progresiva para evaluar lenticelosis en frutos de palta desde cel
 - Flujo guiado de 3 pasos antes de guardar cada fruto.
 - Seleccion obligatoria de fecha, fundo, tipo de evaluacion, variedad y proceso.
 - Control independiente de frutos registrados por proceso.
+- Codigo o N de fruto como lista obligatoria del 1 al 60.
 - Validacion para evitar codigos repetidos dentro del mismo proceso.
-- Registro de evaluaciones por fruto sin borrar registros de procesos anteriores.
+- Lista de evaluaciones filtrada por el proceso actual.
+- Boton **Guardar proceso** para marcar/finalizar el proceso actual.
+- Seccion **Procesos guardados** para revisar procesos finalizados y sus frutos.
 - Evaluacion de 3 cuadrantes por fruto, cada uno con marco visual 3x3.
-- Captura de lenticelas totales y afectadas por cuadrante.
 - Calculo automatico de lenticelas sanas, porcentaje de dano por cuadrante, promedio final y grado.
 - Registro opcional de foto de la fruta desde camara o galeria.
 - Guardado local en el dispositivo para trabajar sin internet.
-- Almacenamiento de fotos en IndexedDB y datos de evaluacion en `localStorage`.
-- Exportacion de resultados a CSV compatible con Excel.
-- Instalacion como PWA mediante `manifest.json` y `service worker`.
-- Interfaz responsiva pensada para uso en celular.
+- Almacenamiento de fotos en IndexedDB y datos de evaluacion/procesos en `localStorage`.
+- Exportacion de todos los procesos a CSV compatible con Excel.
 
 ## Flujo por pasos
 
 ### Paso 1 de 3: Datos generales de la evaluacion
 
-Antes de abrir el formulario de cuadrantes, la app solicita campos obligatorios:
+Campos obligatorios:
 
 - Fecha: campo tipo fecha, con la fecha actual por defecto.
 - Fundo: Olmos o Motupe.
 - Tipo de evaluacion: Mecanizada o Manual.
 - Variedad: Hass, Zutano, Maluma, Pinkerton o Ettinger.
 
-El usuario no puede avanzar si falta algun dato. Estos valores se mantienen cuando se usa **Nueva evaluacion** para registrar frutos en otro proceso de la misma evaluacion general.
+Estos valores se mantienen cuando se usa **Nueva evaluacion** para elegir otro proceso.
 
 ### Paso 2 de 3: Proceso a elegir
 
-Despues de completar los datos generales, se elige un proceso obligatorio:
+Cada proceso tiene sus propios frutos registrados y su propio estado:
 
 1. 01. Planta
 2. 02. Balde
@@ -48,32 +48,38 @@ Despues de completar los datos generales, se elige un proceso obligatorio:
 10. 10. Desp. 20 dias
 11. 11. Desp. 25 dias
 
-Cada proceso tiene su propio control de frutos. Por ejemplo, el codigo `1` puede existir una vez en `02. Balde` y tambien una vez en `03. Bin`, porque son procesos distintos.
-
 ### Paso 3 de 3: Formulario de evaluacion
 
-El formulario permite registrar:
+Orden de la pantalla:
 
-- Codigo o N de fruto.
-- Cuadrante 1.
-- Cuadrante 2.
-- Cuadrante 3.
-- Resultado final.
-- Clasificacion.
-- Foto de la fruta.
-- Observacion.
-- Evaluaciones guardadas.
+1. Resumen de fecha, fundo, tipo de evaluacion, variedad y proceso.
+2. Codigo o N de fruto con lista del 1 al 60.
+3. Cuadrantes 1, 2 y 3.
+4. Resultado final y clasificacion.
+5. Foto de fruta.
+6. Observacion.
+7. Boton para guardar evaluacion/fruto.
+8. Evaluaciones guardadas del proceso actual.
+9. Boton **Guardar proceso**.
+10. Seccion **Procesos guardados**.
 
-En este paso solo se muestran los botones necesarios:
+## Codigo o N de fruto
 
-- **Volver**: regresa a la seleccion de proceso.
-- **Nueva evaluacion**: limpia solo el formulario actual, conserva fecha/fundo/tipo/variedad y vuelve a seleccionar proceso para registrar otro fruto.
+El codigo se elige desde una lista desplegable obligatoria con valores del 1 al 60.
 
-**Nueva evaluacion** no borra evaluaciones guardadas, no elimina fotos y no afecta registros de procesos anteriores.
+Si un fruto ya fue registrado en el proceso actual, aparece marcado como **Registrado** y no puede seleccionarse. Ejemplo:
 
-## Control de codigo o N de fruto
+```txt
+1 - Registrado
+2 - Registrado
+3 - Registrado
+4
+5
+...
+60
+```
 
-No se puede registrar dos veces el mismo **Codigo o N de fruto** dentro del mismo grupo:
+No se puede repetir el mismo codigo dentro del mismo grupo:
 
 - Fecha.
 - Fundo.
@@ -81,33 +87,43 @@ No se puede registrar dos veces el mismo **Codigo o N de fruto** dentro del mism
 - Variedad.
 - Proceso.
 
-La app normaliza codigos numericos para evitar duplicados. Por ejemplo, `1`, `01` y `001` se consideran el mismo codigo dentro del mismo proceso.
+Cada proceso es independiente. El fruto `1` puede existir una vez en `02. Balde` y tambien una vez en `03. Bin`.
 
-Si el codigo ya existe en ese proceso, la app muestra:
+## Guardar proceso
+
+El boton **Guardar proceso** marca el proceso actual como guardado/finalizado sin borrar sus evaluaciones.
+
+Al guardar, la app muestra un mensaje como:
 
 ```txt
-Este Codigo o N de fruto ya fue registrado para este proceso. Ingresa otro codigo.
+Proceso 02. Balde guardado correctamente.
 ```
 
-El mismo codigo si puede usarse en procesos diferentes.
+Despues se puede usar **Nueva evaluacion** para volver al Paso 2, elegir otro proceso y registrar nuevos frutos manteniendo los datos generales del Paso 1.
 
-## Contador de frutos registrados
+## Procesos guardados
 
-En **Evaluaciones guardadas** se muestra un contador visible:
+La seccion **Procesos guardados** muestra procesos finalizados con formato similar a:
 
-- Total general de evaluaciones guardadas.
-- Total de frutos registrados para el proceso actual.
+```txt
+02. Balde | 20 frutos | Guardado
+03. Bin | 15 frutos | Guardado
+04. Acopio | 10 frutos | Guardado
+```
 
-Al cambiar de proceso, el contador del proceso actual se actualiza. La lista general mantiene visibles todas las evaluaciones, incluso las de otros procesos.
+Al abrir un proceso guardado se pueden revisar sus evaluaciones, cuadrantes, observacion y foto si existe. Esta vista no borra ni modifica datos.
 
-## Registro de cuadrantes
+## Contadores
 
-Por cada cuadrante se registra:
+En **Evaluaciones guardadas** se muestra el contador del proceso actual:
 
-- Lenticelas totales.
-- Lenticelas afectadas.
-- Lenticelas sanas, calculadas automaticamente.
-- Porcentaje de dano, calculado automaticamente.
+```txt
+Proceso actual 02. Balde: 20 frutos registrados de 60
+40 pendientes
+Proceso guardado
+```
+
+La lista de evaluaciones del Paso 3 muestra solo frutos del proceso actual. Los frutos de otros procesos siguen guardados y se pueden ver al seleccionar ese proceso o en **Procesos guardados** si fue finalizado.
 
 ## Regla de calculo
 
@@ -143,7 +159,7 @@ Clasificacion:
 
 ## Foto de la fruta
 
-En el formulario, despues del resultado final, aparece la seccion **Foto de la fruta**. Permite:
+La seccion **Foto de la fruta** permite:
 
 - Tomar foto desde la camara del celular.
 - Subir una foto desde galeria.
@@ -152,66 +168,30 @@ En el formulario, despues del resultado final, aparece la seccion **Foto de la f
 - Eliminar la foto antes de guardar.
 - Guardar la foto junto con la evaluacion para uso offline.
 
-Las fotos se guardan localmente en IndexedDB para evitar sobrecargar `localStorage`. En las evaluaciones guardadas se muestra si existe foto y, al abrir **Ver cuadrantes**, se carga la foto guardada cuando esta disponible.
-
-## Observacion
-
-Despues de la foto hay un campo largo opcional llamado **Observacion** para notas de campo, condicion del fruto o comentarios.
-
-## Datos guardados
-
-Cada evaluacion guarda:
-
-- Fecha.
-- Fundo.
-- Tipo de evaluacion.
-- Variedad.
-- Proceso.
-- Codigo o N de fruto.
-- Datos del cuadrante 1.
-- Datos del cuadrante 2.
-- Datos del cuadrante 3.
-- Resultado final.
-- Clasificacion.
-- Indicador de foto registrada.
-- Foto de fruta, si existe.
-- Observacion.
-
-## Evaluaciones guardadas
-
-Cada evaluacion se muestra de forma resumida con:
-
-- Codigo o N de fruto.
-- Fecha.
-- Fundo.
-- Tipo de evaluacion.
-- Variedad.
-- Proceso.
-- Resultado final.
-- Clasificacion.
-- Foto registrada: Si / No.
-
-Al abrir **Ver cuadrantes** se muestran los datos de los 3 cuadrantes, la foto si existe y la observacion.
+Las fotos se guardan localmente en IndexedDB.
 
 ## Exportacion CSV
 
-El CSV incluye:
+El CSV exporta todos los procesos, no solo el proceso actual. Incluye:
 
 - Fecha.
 - Fundo.
 - Tipo de evaluacion.
 - Variedad.
 - Proceso.
+- Estado del proceso: En edicion / Guardado.
 - Codigo o N de fruto.
-- Cuadrante 1: lenticelas totales, afectadas, sanas y porcentaje de dano.
-- Cuadrante 2: lenticelas totales, afectadas, sanas y porcentaje de dano.
-- Cuadrante 3: lenticelas totales, afectadas, sanas y porcentaje de dano.
+- Datos de cuadrantes 1, 2 y 3.
 - Resultado final.
 - Clasificacion.
 - Foto registrada: Si / No.
 - Observacion.
 
-El archivo descargado puede abrirse en Excel. Como la app no permite guardar codigos duplicados dentro del mismo proceso, esos duplicados tampoco aparecen en la exportacion.
+## Modo offline
+
+La app usa un service worker para guardar la pantalla principal y recursos basicos despues de la primera visita. Las evaluaciones, estados de procesos y fotos quedan en el navegador del dispositivo.
+
+Al borrar datos del navegador o desinstalar la PWA, tambien pueden eliminarse las evaluaciones y fotos locales. Exporta CSV con frecuencia para respaldar los datos de campo.
 
 ## Instalacion local
 
@@ -220,20 +200,10 @@ Requisitos:
 - Node.js 18 o superior.
 - npm.
 
-Pasos:
-
 ```bash
 npm install
 npm run dev
 ```
-
-Luego abre la URL que muestra la terminal. Para probarla desde un celular, conecta el celular a la misma red Wi-Fi y abre la URL de red que entrega Vite.
-
-## Modo offline
-
-La app usa un service worker para guardar la pantalla principal y recursos basicos despues de la primera visita. Las evaluaciones se guardan localmente en el navegador del dispositivo, por lo que pueden registrarse sin internet.
-
-Las fotos se guardan en IndexedDB del mismo navegador. Al borrar datos del navegador o desinstalar la PWA, tambien pueden eliminarse las evaluaciones y fotos locales. Exporta CSV con frecuencia para respaldar los datos de campo.
 
 ## Build de produccion
 
@@ -243,21 +213,3 @@ npm run preview
 ```
 
 El proyecto esta configurado con `base: './'` para facilitar publicaciones bajo una ruta como GitHub Pages.
-
-## Estructura
-
-```txt
-.
-├── index.html
-├── manifest.json
-├── package.json
-├── public/
-│   ├── icon.svg
-│   ├── manifest.json
-│   └── sw.js
-├── src/
-│   ├── main.js
-│   └── styles.css
-├── sw.js
-└── vite.config.js
-```
