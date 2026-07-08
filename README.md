@@ -6,7 +6,9 @@ Aplicacion web progresiva para evaluar lenticelosis en frutos de palta desde cel
 
 - Flujo guiado de 3 pasos antes de guardar cada fruto.
 - Seleccion obligatoria de fecha, fundo, tipo de evaluacion, variedad y proceso.
-- Registro de evaluaciones por fruto.
+- Control independiente de frutos registrados por proceso.
+- Validacion para evitar codigos repetidos dentro del mismo proceso.
+- Registro de evaluaciones por fruto sin borrar registros de procesos anteriores.
 - Evaluacion de 3 cuadrantes por fruto, cada uno con marco visual 3x3.
 - Captura de lenticelas totales y afectadas por cuadrante.
 - Calculo automatico de lenticelas sanas, porcentaje de dano por cuadrante, promedio final y grado.
@@ -28,7 +30,7 @@ Antes de abrir el formulario de cuadrantes, la app solicita campos obligatorios:
 - Tipo de evaluacion: Mecanizada o Manual.
 - Variedad: Hass, Zutano, Maluma, Pinkerton o Ettinger.
 
-El usuario no puede avanzar si falta algun dato. Estos valores se muestran luego como resumen y se guardan con cada evaluacion.
+El usuario no puede avanzar si falta algun dato. Estos valores se mantienen cuando se usa **Nueva evaluacion** para registrar frutos en otro proceso de la misma evaluacion general.
 
 ### Paso 2 de 3: Proceso a elegir
 
@@ -46,7 +48,7 @@ Despues de completar los datos generales, se elige un proceso obligatorio:
 10. 10. Desp. 20 dias
 11. 11. Desp. 25 dias
 
-El formulario de evaluacion solo se muestra despues de seleccionar un proceso.
+Cada proceso tiene su propio control de frutos. Por ejemplo, el codigo `1` puede existir una vez en `02. Balde` y tambien una vez en `03. Bin`, porque son procesos distintos.
 
 ### Paso 3 de 3: Formulario de evaluacion
 
@@ -62,7 +64,16 @@ El formulario permite registrar:
 - Observacion.
 - Evaluaciones guardadas.
 
-Como fecha y variedad se eligen en el Paso 1, ya no se piden dentro del formulario. En su lugar, el formulario muestra un resumen visible con:
+En este paso solo se muestran los botones necesarios:
+
+- **Volver**: regresa a la seleccion de proceso.
+- **Nueva evaluacion**: limpia solo el formulario actual, conserva fecha/fundo/tipo/variedad y vuelve a seleccionar proceso para registrar otro fruto.
+
+**Nueva evaluacion** no borra evaluaciones guardadas, no elimina fotos y no afecta registros de procesos anteriores.
+
+## Control de codigo o N de fruto
+
+No se puede registrar dos veces el mismo **Codigo o N de fruto** dentro del mismo grupo:
 
 - Fecha.
 - Fundo.
@@ -70,7 +81,24 @@ Como fecha y variedad se eligen en el Paso 1, ya no se piden dentro del formular
 - Variedad.
 - Proceso.
 
-Tambien incluye botones para volver, cambiar datos generales, cambiar proceso y comenzar una nueva evaluacion.
+La app normaliza codigos numericos para evitar duplicados. Por ejemplo, `1`, `01` y `001` se consideran el mismo codigo dentro del mismo proceso.
+
+Si el codigo ya existe en ese proceso, la app muestra:
+
+```txt
+Este Codigo o N de fruto ya fue registrado para este proceso. Ingresa otro codigo.
+```
+
+El mismo codigo si puede usarse en procesos diferentes.
+
+## Contador de frutos registrados
+
+En **Evaluaciones guardadas** se muestra un contador visible:
+
+- Total general de evaluaciones guardadas.
+- Total de frutos registrados para el proceso actual.
+
+Al cambiar de proceso, el contador del proceso actual se actualiza. La lista general mantiene visibles todas las evaluaciones, incluso las de otros procesos.
 
 ## Registro de cuadrantes
 
@@ -183,7 +211,7 @@ El CSV incluye:
 - Foto registrada: Si / No.
 - Observacion.
 
-El archivo descargado puede abrirse en Excel.
+El archivo descargado puede abrirse en Excel. Como la app no permite guardar codigos duplicados dentro del mismo proceso, esos duplicados tampoco aparecen en la exportacion.
 
 ## Instalacion local
 
